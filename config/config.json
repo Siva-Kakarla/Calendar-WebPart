@@ -1,0 +1,29 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "mars-calendar-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/marsCalendar/MarsCalendarWebPart.js",
+          "manifest": "./src/webparts/marsCalendar/MarsCalendarWebPart.manifest.json"
+        }
+      ]
+    },
+    "calendar-view-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/calendarView/CalendarViewWebPart.js",
+          "manifest": "./src/webparts/calendarView/CalendarViewWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {
+    "jquery": "https://code.jquery.com/jquery-2.2.4.js"
+  },
+  "localizedResources": {
+    "MarsCalendarWebPartStrings": "lib/webparts/marsCalendar/loc/{locale}.js",
+    "CalendarViewWebPartStrings": "lib/webparts/calendarView/loc/{locale}.js"
+  }
+}

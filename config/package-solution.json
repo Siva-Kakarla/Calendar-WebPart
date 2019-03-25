@@ -1,0 +1,12 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "mars-calendar-client-side-solution",
+    "id": "b06381ca-04cd-4a92-a8c4-75bb5a6bac4a",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true
+  },
+  "paths": {
+    "zippedPackage": "solution/mars-calendar.sppkg"
+  }
+}

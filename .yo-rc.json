@@ -1,0 +1,11 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "isCreatingSolution": false,
+    "environment": "spo",
+    "version": "1.6.0",
+    "libraryName": "mars-calendar",
+    "libraryId": "b06381ca-04cd-4a92-a8c4-75bb5a6bac4a",
+    "packageManager": "npm",
+    "componentType": "webpart"
+  }
+}
