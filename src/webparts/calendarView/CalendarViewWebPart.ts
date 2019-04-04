@@ -2,17 +2,24 @@ import { Version } from '@microsoft/sp-core-library';
 import {
   BaseClientSideWebPart,
   IPropertyPaneConfiguration,
-  PropertyPaneTextField
+  PropertyPaneTextField,
+  PropertyPaneDropdown
 } from '@microsoft/sp-webpart-base';
 import { escape, trimEnd} from '@microsoft/sp-lodash-subset';
 
 import styles from './CalendarViewWebPart.module.scss';
 import * as strings from 'CalendarViewWebPartStrings';
 
+import { PropertyFieldListPicker, PropertyFieldListPickerOrderBy } from '@pnp/spfx-property-controls/lib/PropertyFieldListPicker';
 import * as spns from "sp-pnp-js";
+import { SPField } from '@microsoft/sp-page-context';
+import { FieldTypes } from 'sp-pnp-js';
 
 export interface ICalendarViewWebPartProps {
   description: string;
+  lists: string | string[]; // Stores the list ID(s)
+  StartDay_PropertyDropdown: string;
+  EndDay_PropertyDropdown: string;
 }
 
 export default class CalendarViewWebPart extends BaseClientSideWebPart<ICalendarViewWebPartProps> {
@@ -22,12 +29,17 @@ export default class CalendarViewWebPart extends BaseClientSideWebPart<ICalendar
   private Calendar_Previous_Month = new Date();
   private Previus_Btn = (Math.random()).toString();
   private Next_Btn = (Math.random()).toString();
-
+  private StartDate_Columns = [];
+  private EndDate_Columns = [];
+  private StartDay_PropertyDisable = true;
+  private EndDay_PropertyDisable = true;
   private _MonthlyEvents:any[] ;
   
   public render(): void {
+    //alert(this.properties.StartDay_PropertyDropdown);
+    //alert(this.properties.EndDay_PropertyDropdown);
     this.Create_Month_View(null);
-  }
+  }  
 
   protected Create_Month_View(RawDate)
   {
@@ -131,7 +143,6 @@ export default class CalendarViewWebPart extends BaseClientSideWebPart<ICalendar
       const Final_HTML = `
     
         <div class="${ styles.MyCalendar}">
-          
           <div class="${styles.CalendarHeadder}">        
             <div class="${styles.previous}">
               <a id="${this.Previus_Btn}" class="${styles.button}">
@@ -139,8 +150,9 @@ export default class CalendarViewWebPart extends BaseClientSideWebPart<ICalendar
               </a>
             </div>
             <div>
-            <h2>`+ current_MonthName + `(`+ Today_year +`)`+`</h2>
+            <h2>`+ this.properties.StartDay_PropertyDropdown  + ` - `+  current_MonthName + `(`+ Today_year +`) - `+ this.properties.EndDay_PropertyDropdown +`</h2>
             </div>
+            
             <div class="${styles.next}">
               <a id="${this.Next_Btn}" class="${styles.button}">
                 <i class="ms-Icon ms-Icon--DoubleChevronRight12" aria-hidden="true"></i>
@@ -429,6 +441,84 @@ export default class CalendarViewWebPart extends BaseClientSideWebPart<ICalendar
     return false;
   }
 
+  private ReminingColumns(DateColumns) {
+    return DateColumns['text'] != this.properties.StartDay_PropertyDropdown;
+  }
+
+  private ListSelectionChange_Handler()
+  {
+    this.context.statusRenderer.displayLoadingIndicator(this.domElement, 'StartDay_PropertyDropdown');
+
+    let abc = this.properties.lists
+    let ColumnArray = [];
+    
+    // you can also get individual fields using getById, getByTitle, or getByInternalNameOrTitle
+    spns.sp.web.lists.getById(abc.toString()).fields.filter("FieldTypeKind eq 4").get().then(f => {
+
+      debugger;
+
+        console.log(f);
+        for (let index = 0; index < f.length; ++index) 
+        {
+          ColumnArray.push({key: f[index]['InternalName'], text: f[index]['Title']})
+        }
+
+        if(ColumnArray.length !=0)
+        {
+          this.StartDate_Columns = ColumnArray;
+          this.StartDay_PropertyDisable = false;
+          this.context.propertyPane.refresh();
+          this.context.statusRenderer.clearLoadingIndicator(this.domElement);
+          this.render();
+        }
+    });
+  }
+
+  protected onPropertyPaneFieldChanged(propertyPath: string, oldValue: any, newValue: any): void {
+
+    if (propertyPath === 'StartDay_PropertyDropdown' && newValue)
+    {
+      // push new list value
+      super.onPropertyPaneFieldChanged(propertyPath, oldValue, newValue);
+      
+      // get previously selected item
+      const previousItem: string = this.properties.EndDay_PropertyDropdown;
+      
+      // reset selected item
+      this.properties.EndDay_PropertyDropdown = undefined;
+      
+      // push new item value
+      this.onPropertyPaneFieldChanged('EndDay_PropertyDropdown', previousItem, this.properties.EndDay_PropertyDropdown);
+      
+      // disable item selector until new items are loaded
+      this.EndDay_PropertyDisable = true;
+      
+      // refresh the item selector control by repainting the property pane
+      this.context.propertyPane.refresh();
+      
+      // communicate loading items
+      this.context.statusRenderer.displayLoadingIndicator(this.domElement, 'EndDay_PropertyDropdown');
+
+      debugger;
+
+      this.EndDate_Columns = this.StartDate_Columns.filter(this.ReminingColumns.bind(this));
+      this.EndDay_PropertyDisable = false;
+      this.context.statusRenderer.clearLoadingIndicator(this.domElement);
+      
+      // re-render the web part as clearing the loading indicator removes the web part body
+      this.render();
+      // refresh the item selector control by repainting the property pane
+      this.context.propertyPane.refresh();
+    }
+    else {
+      super.onPropertyPaneFieldChanged(propertyPath, oldValue, newValue);
+    }
+  }
+
+  protected get disableReactivePropertyChanges(): boolean {   
+    return true;   
+  }
+
   protected get dataVersion(): Version {
     return Version.parse('1.0');
   }
@@ -444,8 +534,33 @@ export default class CalendarViewWebPart extends BaseClientSideWebPart<ICalendar
             {
               groupName: strings.BasicGroupName,
               groupFields: [
-                PropertyPaneTextField('description', {
-                  label: strings.DescriptionFieldLabel
+                            
+                PropertyFieldListPicker('lists', {
+                  label: 'Select a list',
+                  selectedList: this.properties.lists,
+                  includeHidden: false,
+                  orderBy: PropertyFieldListPickerOrderBy.Title,
+                  disabled: false,
+                  onPropertyChange: this.ListSelectionChange_Handler.bind(this),
+                  properties: this.properties,
+                  context: this.context,
+                  onGetErrorMessage: null,
+                  deferredValidationTime: 0,
+                  key: 'listPickerFieldId'
+                }),
+
+                PropertyPaneDropdown('StartDay_PropertyDropdown', { 
+                  label: 'Start Day Column:',
+                  // selectedKey: "DarkBlue",
+                  disabled: this.StartDay_PropertyDisable, 
+                  options: this.StartDate_Columns
+                }),
+                
+                PropertyPaneDropdown('EndDay_PropertyDropdown', { 
+                  label: 'End Day Column:',
+                  // selectedKey: "DarkBlue",
+                  disabled: this.EndDay_PropertyDisable,
+                  options: this.EndDate_Columns
                 })
               ]
             }
@@ -454,5 +569,4 @@ export default class CalendarViewWebPart extends BaseClientSideWebPart<ICalendar
       ]
     };
   }
-
 }

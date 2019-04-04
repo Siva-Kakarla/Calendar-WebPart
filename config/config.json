@@ -24,6 +24,7 @@
   },
   "localizedResources": {
     "MarsCalendarWebPartStrings": "lib/webparts/marsCalendar/loc/{locale}.js",
-    "CalendarViewWebPartStrings": "lib/webparts/calendarView/loc/{locale}.js"
+    "CalendarViewWebPartStrings": "lib/webparts/calendarView/loc/{locale}.js",
+    "PropertyControlStrings": "node_modules/@pnp/spfx-property-controls/lib/loc/{locale}.js"
   }
 }
